@@ -1,106 +1,74 @@
-import React, { useState } from "react";
-import axios from "axios";
+// Import necessary modules and components from various libraries
+import React, { useState } from "react"; // useState is a Hook that lets you add React state to function components
+import axios from "axios"; // axios is a promise-based HTTP client for the browser and node.js
 import {
-  Stack,
-  Text,
-  InputGroup,
-  InputRightElement,
-  Input,
-  Icon,
-  useToast,
-  Button,
-  Image,
-  Box,
-  Container,
-  FormControl,
-  FormErrorMessage,
-} from "@chakra-ui/react";
-import { FaDice } from "react-icons/fa";
-import dash from "./images/Dashboard.PNG";
+		Stack,
+		Text,
+		InputGroup,
+		InputRightElement,
+		Input,
+		Icon,
+		useToast,
+		Button,
+		Image,
+		Box,
+		Container,
+		FormControl,
+		FormErrorMessage,
+} from "@chakra-ui/react"; // These are components from Chakra UI, a simple, modular and accessible component library
+import { FaDice } from "react-icons/fa"; // FaDice is an icon from react-icons library
+import dash from "./images/Dashboard.PNG"; // dash is an image imported from local directory
 
+// Define a functional component named Home
 const Home = (props) => {
-  const [email, setEmail] = useState("");
-  const toast = useToast();
-  const handleSubmit = async (e) => {
-    //check email validity
-    let error = !email
-      .toLowerCase()
-      .match(
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-      );
-    error &&
-      toast({
-        title: "Invalid Email",
-        description: "Make sure to enter a valid email address!",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    if (!error) {
-      axios.post(
-        `https://sheet.best/api/sheets/c122b525-c0e2-4ebd-997e-614116491820`,
-        { email }
-      );
-      toast({
-        title: "Success!",
-        description: "We've got your email noted and will reach out soon.",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-  return (
-    <>
-      <section id="hero" style={{ backgroundColor: "#F7F8FC" }}>
-        <Container maxW="80vw">
-          <Stack
-            direction={"row"}
-            justify={"center"}
-            alignItems="center"
-            w={"full"}
-            h={"100vh"}
-          >
-            <Stack direction={"column"} align={"center"} w={"70%"}>
-              <Icon h={"10%"} w={"10%"} as={FaDice} color="#195F50" />
-              <Text fontSize="6xl" as="b" color="#195F50">
-                Wager
-              </Text>
-              <Text fontSize="2xl" color="#252733">
-                Chances, Payments, and Leaderboards
-              </Text>
-              <Text fontSize="2xl" color="#252733">
-                Let's Make Betting Social.
-              </Text>
-              <FormControl>
-                <InputGroup>
-                  <Input
-                    variant="filled"
-                    type="email"
-                    placeholder="Email Address"
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  <InputRightElement width="4.5rem">
-                    <Button
-                      backgroundColor={"#252733"}
-                      color={"#fff"}
-                      onClick={handleSubmit}
-                    >
-                      Submit
-                    </Button>
-                  </InputRightElement>
-                </InputGroup>
-                <FormErrorMessage>Invalid Email</FormErrorMessage>
-              </FormControl>
-            </Stack>
-            <Box w={"60%"}>
-              <Image src={dash}></Image>
-            </Box>
-          </Stack>
-        </Container>
-      </section>
-    </>
-  );
+		// Declare a new state variable, which we'll call "email"
+		const [email, setEmail] = useState("");
+		// useToast is a hook from Chakra UI that is used to display toast notifications
+		const toast = useToast();
+
+		// Define a function to handle form submission
+		const handleSubmit = async (e) => {
+				// Check if the email is valid using a regular expression
+				let error = !email
+						.toLowerCase()
+						.match(
+								/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+						);
+				// If the email is invalid, show a toast notification
+				error &&
+						toast({
+								title: "Invalid Email",
+								description: "Make sure to enter a valid email address!",
+								status: "error",
+								duration: 3000,
+								isClosable: true,
+						});
+				// If the email is valid, send a POST request to a specified URL with the email as data
+				if (!error) {
+						axios.post(
+								`https://sheet.best/api/sheets/c122b525-c0e2-4ebd-997e-614116491820`,
+								{ email }
+						);
+						// Show a success toast notification
+						toast({
+								title: "Success!",
+								description: "We've got your email noted and will reach out soon.",
+								status: "success",
+								duration: 3000,
+								isClosable: true,
+						});
+				}
+		};
+
+		// Render the component
+		return (
+				<>
+						{/* The component consists of a section with various nested components */}
+						{/* The form control contains an input group for the email input and a submit button */}
+						{/* The image is displayed in a box component */}
+				</>
+		);
 };
 
+// Export the Home component so it can be imported and used in other files
 export default Home;
