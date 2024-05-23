@@ -1,29 +1,8 @@
-/*
-- Define the data structures: You'll need to define the data structures that will hold the state of your smart contract.
-This could include the current phase, the bets placed by users, and the result of the match.
-
-- Implement phase transitions: You'll need to implement functions that transition the contract from one phase to the next.
-This could include a function to start the betting phase, a function to start the match phase, and a function to start the result phase.
-
-- Implement betting: You'll need to implement a function that allows users to place bets.
-This function should only be callable during the betting phase, and it should record the user's bet and the amount of SOL they've bet.
-
-- Implement match locking: You'll need to implement a function that locks the match, preventing further bets from being placed.
-This function should only be callable during the match phase.
-
-- Implement result announcement: You'll need to implement a function that announces the result of the match.
-This function should only be callable during the result phase, and it should record the result of the match.
-
-- Implement payout calculation: You'll need to implement a function that calculates the payout for each user
-based on the result of the match and the bets that were placed. This function should only be callable during the result phase.
-
-- Implement payout distribution: You'll need to implement a function that distributes the calculated payouts to the users.
-This function should only be callable during the result phase.
-
-- Write tests: Finally, you'll need to write tests for each of these functions to ensure they work as expected.
-*/
-
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{
+	program::invoke,
+	system_instruction,
+};
 
 #[program]
 pub mod betting_contract {
@@ -40,19 +19,32 @@ pub mod betting_contract {
 		Blue,
 	}
 
-	#[state]
+	#[account]
 	pub struct ContractState {
-		current_phase: ContractPhase,
-		match_id: u64,
-		match_result: Team,
-		bets: Vec<Bet>,
+		pub current_phase: ContractPhase,
+		pub match_id: u64,
+		pub match_result: Option<Team>,
+		pub bets: Vec<Bet>,
+		pub bet_weights: Vec<BetWeight>,
+		pub red_to_blue_rate: f64,
+		pub total_red: u64,
+		pub total_blue: u64,
+		pub house_fee: u64,
 	}
 
+	#[account]
 	pub struct Bet {
-		user: Pubkey,
-		team: Team,
-		amount: u64,
-		referal: Option<RefPubKey>,
+		pub user: Pubkey,
+		pub team: Team,
+		pub amount: u64,
+		pub referral: Option<Pubkey>,
+	}
+
+	#[derive(Clone)]
+	pub struct BetWeight {
+		pub user: Pubkey,
+		pub team: Team,
+		pub weight: f64,
 	}
 
 	impl ContractState {
@@ -62,71 +54,108 @@ pub mod betting_contract {
 				match_id: 0,
 				match_result: None,
 				bets: Vec::new(),
+				total_red: 0,
+				total_blue: 0,
+				house_fee: 0,
 			}
 		}
 
-		pub fn calculate_totals(&self) -> (u64, u64) {
-			let mut total_red = 0;
-			let mut total_blue = 0;
-	
-			for Bet in &self.bets {
-				if Bet.team == 0 {
-					total_red += Bet.amount;
-				} else if bet.team == 1 {
-					total_blue += Bet.amount;
-				}
+		pub fn place_bet(&mut self, bet: Bet) -> ProgramResult {
+			if self.current_phase != ContractPhase::Betting {
+				return Err(ProgramError::Custom(0)); // Not in betting phase
 			}
-	
-			(total_red, total_blue)
+			let fee = (bet.amount * 4) / 100; // 4% house fee
+			self.house_fee += fee;
+			let net_amount = bet.amount - fee;
+			match bet.team {
+				Team::Red => self.total_red += net_amount,
+				Team::Blue => self.total_blue += net_amount,
+			}
+			self.bets.push(bet);
+			Ok(())
 		}
 
-		pub fn handle_phase(&mut self) {
-			match self.current_phase {
-				ContractPhase::Betting => {
-					// Handle betting phase
+		pub fn start_match(&mut self) -> ProgramResult {
+			if self.current_phase != ContractPhase::Betting {
+				return Err(ProgramError::Custom(1)); // Not in betting phase
+			}
+			if self.total_red == 0 || self.total_blue == 0 {
+				// Refund all bets if one side is empty
+				for bet in &self.bets {
+					let accounts = ctx.accounts.iter().find(|a| a.key() == bet.user);
+					if let Some(account) = accounts {
+						let ix = system_instruction::transfer(
+							&ctx.accounts.contract_state.to_account_info().key,
+							&bet.user,
+							bet.amount,
+						);
+						invoke(
+							&ix,
+							&[
+								ctx.accounts.contract_state.to_account_info(),
+								account.clone(),
+							],
+						)?;
+					}
 				}
-				ContractPhase::Match => {
-					// Handle match phase
+				self.bets.clear();
+				self.total_red = 0;
+				self.total_blue = 0;
+				return Err(ProgramError::Custom(2)); // One side is empty
+			}
+			else {
+				// Calculate the rate of total red to total blue
+				self.red_to_blue_rate = self.total_red as f64 / self.total_blue as f64;
+
+				// Calculate weights for each bet
+				self.bet_weights.clear(); // Clear previous weights
+				for bet in &self.bets {
+					let weight = match bet.team {
+						Team::Red => bet.amount as f64 / self.total_red as f64,
+						Team::Blue => bet.amount as f64 / self.total_blue as f64,
+					};
+					self.bet_weights.push(BetWeight {
+						user: bet.user,
+						team: bet.team,
+						weight,
+					});
 				}
-				ContractPhase::Result => {
-					// Handle result phase
-					// Increment match_id for the next match
-					self.match_id += 1;
-				}
+				self.current_phase = ContractPhase::Match;
+				Ok(())
 			}
 		}
-	}
-}
 
-	#[access_control(ctx.accounts.user.key() == ctx.accounts.bet.user)] {
-	pub fn place_bet (
-		ctx: Context<PlaceBet>,
-		team: Team,
-		amount: u64
-	) -> ProgramResult {
-		let bet = Bet {
-			user: *ctx.accounts.user.key(),
-			team,
-			amount,
-			referal: None,
-		};
-		ctx.accounts.bet.try_borrow_mut()?.push(bet);
-		Ok(())
-	}
+		pub fn end_match(&mut self, winner: Team) -> ProgramResult {
+			if self.current_phase != ContractPhase::Match {
+				return Err(ProgramError::Custom(3)); // Not in match phase
+			}
+			self.match_result = Some(winner);
+			self.current_phase = ContractPhase::Result;
+			Ok(())
+		}
 
-	pub fn start_match(ctx: Context<StartMatch>) -> ProgramResult {
-		// TODO: Implement match start
-		Ok(())
-	}
-
-	pub fn announce_result(ctx: Context<AnnounceResult>, result: u8) -> ProgramResult {
-		// TODO: Implement result announcement
-		Ok(())
-	}
-
-	pub fn distribute_payouts(ctx: Context<DistributePayouts>) -> ProgramResult {
-		// TODO: Implement payout distribution
-		Ok(())
+		pub fn distribute_payouts(&mut self) -> ProgramResult {
+			if self.current_phase != ContractPhase::Result {
+				return Err(ProgramError::Custom(4)); // Not in result phase
+			}
+			let total_pool = self.total_red + self.total_blue;
+			let winner_pool = match self.match_result {
+				Some(Team::Red) => self.total_red,
+				Some(Team::Blue) => self.total_blue,
+				None => return Err(ProgramError::Custom(5)), // No winner set
+			};
+			for bet in &self.bets {
+				if bet.team == self.match_result.unwrap() {
+					let user_payout = (bet.amount * total_pool) / winner_pool;
+					// Payout logic here
+				}
+			}
+			self.bets.clear();
+			self.total_red = 0;
+			self.total_blue = 0;
+			self.current_phase = ContractPhase::Betting;
+			Ok(())
+		}
 	}
 }
 
@@ -135,20 +164,24 @@ pub struct PlaceBet<'info> {
 	#[account(mut)]
 	pub user: Signer<'info>,
 	#[account(mut)]
-	pub bet: Account<'info, Bet>,
+	pub contract_state: Account<'info, ContractState>,
 }
 
 #[derive(Accounts)]
 pub struct StartMatch<'info> {
-	// TODO: Define accounts needed to start match
+	#[account(mut)]
+	pub contract_state: Account<'info, ContractState>,
 }
 
 #[derive(Accounts)]
-pub struct AnnounceResult<'info> {
-	// TODO: Define accounts needed to announce result
+pub struct EndMatch<'info> {
+	#[account(mut)]
+	pub contract_state: Account<'info, ContractState>,
 }
 
 #[derive(Accounts)]
 pub struct DistributePayouts<'info> {
-	// TODO: Define accounts needed to distribute payouts
+	#[account(mut)]
+	pub contract_state: Account<'info, ContractState>,
 }
+
