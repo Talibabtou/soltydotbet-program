@@ -10,10 +10,10 @@ pub mod processor;
 // Re-export the solana_program crate so that other modules can use it
 pub use solana_program;
 // Import specific items from the solana_program crate
-use solana_program::{pubkey::{Pubkey}, program_error::ProgramError, msg};
+use solana_program::{pubkey::Pubkey, program_error::ProgramError, msg};
 
 // Declare the program's ID. This is a unique identifier for the program on the Solana blockchain
-solana_program::declare_id!("EEjpJXCfHEqcRyAxW6tr3MNZqpP2MjAErkezFyp4HEah");
+solana_program::declare_id!(contract_id);
 
 // Function to get the address of a pot given a name. The address is derived from the program's ID and the name
 pub(crate) fn get_pot_address (name:[u8; 20]) -> (Pubkey, u8) {

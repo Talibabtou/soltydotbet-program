@@ -50,21 +50,40 @@ pub mod betting_contract {
 	impl ContractState {
 		pub fn new() -> Self {
 			Self {
-				current_phase: ContractPhase::Betting,
 				match_id: 0,
 				match_result: None,
 				bets: Vec::new(),
+				red_to_blue_rate: 1,
 				total_red: 0,
 				total_blue: 0,
 				house_fee: 0,
 			}
 		}
 
+		impl ContractState {
+			pub fn change_phase(&mut self, new_phase: ContractPhase) {
+				if self.current_phase == ContractPhase::Result && new_phase == ContractPhase::Betting {
+					*self = Self::new();
+				}
+				self.current_phase = new_phase;
+			}
+		}
+
 		pub fn place_bet(&mut self, bet: Bet) -> ProgramResult {
 			if self.current_phase != ContractPhase::Betting {
-				return Err(ProgramError::Custom(0)); // Not in betting phase
+				return Err(ProgramError::Custom(0))
 			}
-			let fee = (bet.amount * 4) / 100; // 4% house fee
+			let fee;
+			let referral_fee;
+			if let Some(referral) = bet.referral {
+				fee = (bet.amount * 35) / 1000; // 3.5% house fee
+				referral_fee = (bet.amount * 5) / 1000; // 0.5% referral fee
+				// Add the referral fee to the referral's total fee
+				let total_fee = self.referral_fees.entry(referral).or_insert(0);
+				*total_fee += referral_fee;
+			} else {
+				fee = (bet.amount * 4) / 100; // 4% house fee
+			}
 			self.house_fee += fee;
 			let net_amount = bet.amount - fee;
 			match bet.team {
@@ -106,7 +125,6 @@ pub mod betting_contract {
 			else {
 				// Calculate the rate of total red to total blue
 				self.red_to_blue_rate = self.total_red as f64 / self.total_blue as f64;
-
 				// Calculate weights for each bet
 				self.bet_weights.clear(); // Clear previous weights
 				for bet in &self.bets {
