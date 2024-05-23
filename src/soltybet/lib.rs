@@ -95,8 +95,8 @@ pub mod betting_contract {
 		}
 
 		pub fn start_match(&mut self) -> ProgramResult {
-			if self.current_phase != ContractPhase::Betting {
-				return Err(ProgramError::Custom(1)); // Not in betting phase
+			if self.current_phase != ContractPhase::Match {
+				return Err(ProgramError::Custom(3)); // Not in match phase
 			}
 			if self.total_red == 0 || self.total_blue == 0 {
 				// Refund all bets if one side is empty
@@ -126,7 +126,6 @@ pub mod betting_contract {
 				// Calculate the rate of total red to total blue
 				self.red_to_blue_rate = self.total_red as f64 / self.total_blue as f64;
 				// Calculate weights for each bet
-				self.bet_weights.clear(); // Clear previous weights
 				for bet in &self.bets {
 					let weight = match bet.team {
 						Team::Red => bet.amount as f64 / self.total_red as f64,
@@ -141,15 +140,6 @@ pub mod betting_contract {
 				self.current_phase = ContractPhase::Match;
 				Ok(())
 			}
-		}
-
-		pub fn end_match(&mut self, winner: Team) -> ProgramResult {
-			if self.current_phase != ContractPhase::Match {
-				return Err(ProgramError::Custom(3)); // Not in match phase
-			}
-			self.match_result = Some(winner);
-			self.current_phase = ContractPhase::Result;
-			Ok(())
 		}
 
 		pub fn distribute_payouts(&mut self) -> ProgramResult {
@@ -203,3 +193,10 @@ pub struct DistributePayouts<'info> {
 	pub contract_state: Account<'info, ContractState>,
 }
 
+#[derive(Accounts)]
+pub struct ReferralFee<'info> {
+	#[account(mut)]
+	pub contract_state: Account<'info, ContractState>,
+	#[account(mut)]
+	pub user: Signer<'info>,
+}
