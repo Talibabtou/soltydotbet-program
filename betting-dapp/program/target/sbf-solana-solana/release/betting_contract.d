@@ -1,0 +1,1 @@
+/home/talibabtou/Desktop/code/solana/soltydotbet/betting-dapp/program/target/sbf-solana-solana/release/betting_contract.so: /home/talibabtou/Desktop/code/solana/soltydotbet/betting-dapp/program/src/lib.rs

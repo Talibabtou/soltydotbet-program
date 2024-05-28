@@ -1,0 +1,8 @@
+/home/talibabtou/Desktop/code/solana/soltydotbet/perp-git/target/debug/deps/libspl_token_metadata_interface-aac3fbd8828e1233.rmeta: /home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/lib.rs /home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/error.rs /home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/instruction.rs /home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/state.rs
+
+/home/talibabtou/Desktop/code/solana/soltydotbet/perp-git/target/debug/deps/spl_token_metadata_interface-aac3fbd8828e1233.d: /home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/lib.rs /home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/error.rs /home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/instruction.rs /home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/state.rs
+
+/home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/lib.rs:
+/home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/error.rs:
+/home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/instruction.rs:
+/home/talibabtou/.cargo/registry/src/index.crates.io-6f17d22bba15001f/spl-token-metadata-interface-0.2.0/src/state.rs:
