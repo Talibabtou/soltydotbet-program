@@ -12,17 +12,13 @@ impl BettingState {
 			Team::Red => self.total_red += net_amount,
 			Team::Blue => self.total_blue += net_amount,
 		}
-		self.betting_state.bets.push(bet);
+		betting_state.bets.push(bet);
 		Ok(())
 	}
 
 	fn validate_bet(&self, bet: &Bet) -> ProgramResult {
 		if self.current_phase != ContractPhase::Betting {
 			return Err(ProgramError::Custom(0)); // Not in betting phase
-		}
-		let (pda, _nonce) = Pubkey::find_program_address(&[b"bet", &bet.user.to_bytes()], &self.program_id);
-		if pda != bet.user {
-			return Err(ProgramError::Custom(1)); // Invalid PDA
 		}
 		Ok(())
 	}

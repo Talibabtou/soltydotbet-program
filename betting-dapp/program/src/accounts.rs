@@ -11,6 +11,7 @@ pub struct ContractState {
 	pub financial_state: FinancialState,
 	pub phase: ContractPhase,
 	pub oracle: Pubkey,
+	pub initialized: bool,
 }
 
 #[derive(Accounts)]
@@ -29,14 +30,11 @@ pub struct InitializeOracle<'info> {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-	#[account(init, payer = user, seeds = [b"red"], bump, space = 1024)]
-	pub red_bets_account: Account<'info, BetPool>,
-	
-	#[account(init, payer = user, seeds = [b"blue"], bump, space = 1024)]
-	pub blue_bets_account: Account<'info, BetPool>,
-
+	#[account(init, payer = user, space = 8 + std::mem::size_of::<ContractState>())]
+	pub contract_state: Account<'info, ContractState>,
 	#[account(mut)]
 	pub user: Signer<'info>,
+	pub authority: Signer<'info>,
 	pub system_program: Program<'info, System>,
 }
 

@@ -7,9 +7,13 @@ use crate::errors::*;
 pub mod betting_contract {
 	use super::*;
 
-	pub fn initialize_oracle(ctx: Context<InitializeOracle>, oracle: Pubkey) -> ProgramResult {
+	pub fn initialize(ctx: Context<Initialize>, oracle: Pubkey) -> ProgramResult {
 		let contract_state = &mut ctx.accounts.contract_state;
+		require!(ctx.accounts.user.key == ctx.accounts.authority.key, ProgramError::Custom(1)); // Ensure only deployer can call
+		require!(contract_state.initialized == false, ProgramError::Custom(2)); // Ensure it can only be called once
+	
 		contract_state.initialize_oracle(oracle, ctx.program_id);
+		contract_state.initialized = true;
 		Ok(())
 	}
 
