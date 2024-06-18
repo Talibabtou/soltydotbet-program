@@ -1,29 +1,27 @@
 use anchor_lang::prelude::*;
 
-use crate::accounts::*;
-use crate::errors::*;
-
 #[program]
 pub mod betting_contract {
 	use super::*;
 
-	pub fn initialize(ctx: Context<Initialize>, oracle: Pubkey) -> ProgramResult {
+	pub fn initialize(oracle: Pubkey) -> ProgramResult {
 		let contract_state = &mut ctx.accounts.contract_state;
-		require!(ctx.accounts.user.key == ctx.accounts.authority.key, ProgramError::Custom(1)); // Ensure only deployer can call
-		require!(contract_state.initialized == false, ProgramError::Custom(2)); // Ensure it can only be called once
+		require!(ctx.accounts.user.key == ctx.accounts.authority.key, CustomError::Unauthorized); // Ensure only deployer can call
+		require!(!contract_state.initialized, CustomError::AlreadyInitialized); // Ensure it can only be called once
 	
-		contract_state.initialize_oracle(oracle, ctx.program_id);
+		launch(oracle, program_id)
+		contract_state.initialize(oracle);
 		contract_state.initialized = true;
 		Ok(())
 	}
 
 	pub fn change_phase(ctx: Context<ChangePhase>, new_phase: ContractPhase) -> ProgramResult {
 		let contract_state = &mut ctx.accounts.contract_state;
-		// Ensure the caller is the authorized oracle
-		if ctx.accounts.oracle.key != &contract_state.oracle {
-			return Err(ProgramError::Custom(Unauthorized));
-		}
-		contract_state.change_phase(new_phase);
+		let token_program = &ctx.accounts.token_program;
+		let contract_token_account = &ctx.accounts.contract_token_account;
+		let bettor_token_accounts = &ctx.accounts.bettor_token_accounts;
+
+		contract_state.change_phase(new_phase, token_program, contract_token_account, bettor_token_accounts)?;
 		Ok(())
 	}
 
@@ -32,11 +30,16 @@ pub mod betting_contract {
 		betting_state.place_bet(bet)
 	}
 
-	pub fn start_match<'a, 'b, 'c, 'info>(
-		ctx: Context<'a, 'b, 'c, 'info, StartMatch<'info>>,
-	) -> ProgramResult {
-		let match_state = &mut ctx.accounts.match_state;
-		match_state.start_match(ctx)
+	pub fn start_new_match(ctx: Context<StartMatch>, match_data: MatchData) -> ProgramResult {
+		let contract_state = &mut ctx.accounts.contract_state;
+		// Store the new match data at the current index
+		contract_state.matches[contract_state.current_match_index] = Some(match_data);
+		// Update the current match index using modulo operation
+		contract_state.current_match_index = (contract_state.current_match_index + 1) % 3;
+		// Set the phase to Match
+		contract_state.phase = ContractPhase::Match;
+
+		Ok(())
 	}
 
 	pub fn update_match_result(ctx: Context<UpdateMatchResult>, new_result: Team, oracle_sig: Vec<u8>, oracle_data: Vec<u8>) -> ProgramResult {

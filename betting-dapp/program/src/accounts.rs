@@ -1,24 +1,29 @@
-use anchor_lang::solana_program::program::account_info::AccountInfo;
-use anchor_lang::solana_program::entrypoint::ProgramResult;
-use anchor_lang::solana_program::program::account_info::Signer;
-use anchor_lang::solana_program::sysvar::Sysvar;
-use anchor_lang::prelude::{Account, Accounts, Pubkey};
+use anchor_lang::prelude::*;
+use borsh::{BorshDeserialize, BorshSerialize};
+use std::collections::HashMap;
 
 #[account]
 pub struct ContractState {
-	pub betting_state: BettingState,
-	pub match_state: MatchState,
-	pub financial_state: FinancialState,
+	pub matches: [Option<MatchData>; 3], // Fixed-size array to store the last 3 matches
+	pub current_match_index: usize,
 	pub phase: ContractPhase,
 	pub oracle: Pubkey,
 	pub initialized: bool,
 }
 
-#[derive(Accounts)]
+#[derive(BorshDeserialize, BorshSerialize, PartialEq, Clone)]
 pub enum ContractPhase {
 	Betting,
 	Match,
 	Result,
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Clone)]
+pub struct MatchData {
+	pub match_id: u64,
+	pub betting_state: BettingState,
+	pub match_state: MatchState,
+	pub financial_state: FinancialState,
 }
 
 #[derive(Accounts)]
@@ -41,7 +46,12 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 pub struct ChangePhase<'info> {
 	#[account(mut)]
-	pub contract_state: Account<'info, ContractPhase>,
+	pub contract_state: Account<'info, ContractState>,
+	pub token_program: Program<'info, Token>,
+	#[account(mut)]
+	pub contract_token_account: Account<'info, TokenAccount>,
+	#[account(mut)]
+	pub bettor_token_accounts: Account<'info, HashMap<Pubkey, Account<'info, TokenAccount>>>,
 	#[account(signer, address = contract_state.oracle)]
 	pub oracle: AccountInfo<'info>,
 }
@@ -79,7 +89,6 @@ pub struct BetWeight {
 
 #[account]
 pub struct MatchState {
-	pub match_id: u64,
 	pub match_result: Option<Team>,
 	pub red_to_blue_rate: f64,
 }
@@ -90,10 +99,21 @@ pub enum Team {
 	Blue,
 }
 
-#[account]
+#[account(BorshDeserialize, BorshSerialize)]
 pub struct FinancialState {
 	pub house_fee: u64,
-	pub referral_fees: HashMap<ReferralFee>,
+	pub referral_fees: HashMap<Pubkey, u64>,
+	pub payouts: HashMap<Pubkey, u64>,
+}
+
+#[derive(Accounts)]
+pub struct Payout<'info> {
+	#[account(mut)]
+	pub from: Account<'info, TokenAccount>,
+	#[account(mut)]
+	pub to: Account<'info, TokenAccount>,
+	pub authority: Signer<'info>,
+	pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]

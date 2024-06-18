@@ -1,6 +1,9 @@
-use anchor_lang::prelude::{error, error_code};
+use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum ProgramError {
-	// Additional errors here
+	#[msg("Only the deployer can call this function.")]
+	Unauthorized = 1,
+	#[msg("The contract has already been initialized.")]
+	AlreadyInitialized = 2,
 }
